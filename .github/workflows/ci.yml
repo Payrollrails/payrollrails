@@ -1,0 +1,142 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Backend ────────────────────────────────────────────────────────────────
+  backend:
+    name: Backend — lint & smoke test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: backend
+        run: npm install
+
+      - name: Check for syntax errors
+        working-directory: backend
+        run: |
+          node --check src/config.js
+          node --check src/index.js
+          node --check src/db/index.js
+          node --check src/routes/upload.js
+          node --check src/routes/runs.js
+          node --check src/routes/reports.js
+          node --check src/routes/stellar.js
+          node --check src/routes/vouchers.js
+          node --check src/services/parser.js
+          node --check src/services/stellar.js
+          node --check src/services/engine.js
+          node --check src/services/vouchers.js
+          node --check src/services/reports.js
+
+      - name: Smoke test — server starts and health check passes
+        working-directory: backend
+        env:
+          STELLAR_NETWORK: testnet
+          HORIZON_URL: https://horizon-testnet.stellar.org
+          FUNDER_SECRET_KEY: SCZANGBA5YELQQYGMZICEQOOSINARC2IITDEQ4BYJXQEOXMSFFD62O37
+          FEE_BUMP_SECRET_KEY: SCZANGBA5YELQQYGMZICEQOOSINARC2IITDEQ4BYJXQEOXMSFFD62O37
+          USDC_ISSUER: GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5
+          DB_PATH: ./data/ci-test.db
+          PORT: 3001
+        run: |
+          node src/index.js &
+          SERVER_PID=$!
+          sleep 4
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api/health)
+          kill $SERVER_PID
+          if [ "$STATUS" != "200" ]; then
+            echo "Health check failed with status $STATUS"
+            exit 1
+          fi
+          echo "Health check passed (HTTP $STATUS)"
+
+      - name: CSV parse unit test
+        working-directory: backend
+        run: |
+          node --input-type=module <<'EOF'
+          import { parseCsv, summarize } from './src/services/parser.js';
+
+          const csv = `name,email,address,amount,currency,country
+          Alice,,GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5,50.00,USDC,US
+          Bob,bob@test.com,,25.00,USDC,UK
+          Bad,,INVALID,10.00,USDC,DE`;
+
+          const rows = parseCsv(Buffer.from(csv));
+          const summary = summarize(rows);
+
+          console.log('Rows parsed:', rows.length);
+          console.log('Valid:', summary.valid, '| Invalid:', summary.invalid, '| Vouchers:', summary.voucherCount);
+
+          if (rows.length !== 3) throw new Error('Expected 3 rows');
+          if (summary.valid !== 2) throw new Error('Expected 2 valid rows');
+          if (summary.invalid !== 1) throw new Error('Expected 1 invalid row');
+          if (summary.voucherCount !== 1) throw new Error('Expected 1 voucher');
+
+          console.log('All parser assertions passed ✓');
+          EOF
+
+  # ── Frontend ───────────────────────────────────────────────────────────────
+  frontend:
+    name: Frontend — type-check & build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Type-check
+        working-directory: frontend
+        run: node node_modules/typescript/bin/tsc --noEmit
+
+      - name: Build
+        working-directory: frontend
+        run: node node_modules/next/dist/bin/next build
+
+  # ── Security audit ─────────────────────────────────────────────────────────
+  audit:
+    name: Dependency security audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Audit backend dependencies
+        working-directory: backend
+        run: npm audit --audit-level=high || true
+
+      - name: Audit frontend dependencies
+        working-directory: frontend
+        run: npm audit --audit-level=high || true
