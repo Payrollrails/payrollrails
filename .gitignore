@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Environment — never commit secrets
+.env
+backend/.env
+
+# Database files
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Next.js build output
+frontend/.next/
+
+# Rust build output
+contracts/target/
+*.wasm
+
+# OS & editor
+.DS_Store
+Thumbs.db
+*.local
+.vscode/

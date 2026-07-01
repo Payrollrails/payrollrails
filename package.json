@@ -1,0 +1,13 @@
+{
+  "name": "payrollrails",
+  "version": "1.0.0",
+  "description": "Cross-border stablecoin payroll on Stellar",
+  "private": true,
+  "scripts": {
+    "backend": "node src/index.js --prefix backend",
+    "backend:dev": "npm run dev --prefix backend",
+    "frontend": "node node_modules/next/dist/bin/next dev --prefix frontend",
+    "setup": "npm install --prefix backend && npm install --prefix frontend",
+    "demo:generate": "node demo/generate-demo.js"
+  }
+}
