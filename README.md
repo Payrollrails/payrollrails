@@ -1,5 +1,11 @@
 # PayrollRails
 
+[![CI](https://github.com/Payrollrails/payrollrails/actions/workflows/ci.yml/badge.svg)](https://github.com/Payrollrails/payrollrails/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/Payrollrails/payrollrails/blob/main/LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Payrollrails/payrollrails/blob/main/LICENSE-MIT)
+[![Built on Stellar](https://img.shields.io/badge/Built%20on-Stellar-7B68EE?logo=stellar&logoColor=white)](https://stellar.org)
+[![Node.js 24](https://img.shields.io/badge/Node.js-24-43853d?logo=node.js&logoColor=white)](https://nodejs.org)
+
 **Cross-border stablecoin payroll on Stellar.**
 Pay 50 people in 5 countries in ~8 seconds for ~$0.05 total fees.
 
